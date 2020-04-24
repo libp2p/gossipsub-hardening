@@ -1,0 +1,162 @@
+## This composition runs a pubsub simulation with no adversarial nodes, to
+## establish baseline metrics.
+##
+[metadata]
+name    = "pubsub-{{ COMPOSITION_NAME }}"
+author  = "yusefnapora"
+
+[global]
+plan    = "pubsub"
+case    = "evaluate"
+builder = "{{ TEST_BUILDER | default('docker:go') }}"
+runner  = "{{ TEST_RUNNER | default('local:docker') }}"
+total_instances = {{ N_NODES }}
+
+[global.build_config]
+{{ BUILD_CONFIG | default('') }}
+
+[global.run_config]
+{{ RUN_CONFIG | default('') }}
+
+[[groups]]
+id = "publishers"
+instances = { count = {{ N_PUBLISHER }} }
+
+  [groups.build]
+  selectors = {{ BUILD_SELECTORS }}
+  dependencies = [
+    { module = "github.com/libp2p/go-libp2p-pubsub", version = "{{ GS_VERSION }}" }
+  ]
+
+  [groups.run.test_params]
+  t_heartbeat = "{{ T_HEARTBEAT | default('1s') }}"
+  t_heartbeat_initial_delay = "{{ T_HEARTBEAT_INITIAL_DELAY | default('100ms') }}"
+  t_run = "{{ T_RUN }}"
+  t_warm = "{{ T_WARM }}"
+  t_cool = "{{ T_COOL | default('10s') }}"
+  t_setup = "{{ T_SETUP | default('1m') }}"
+  full_traces = "{{ FULL_TRACES | default('false') }}"
+
+  publisher = "true"
+  flood_publishing = '{{ FLOOD_PUBLISHING }}'
+  topics = '{{ TOPIC_CONFIG | tojson() }}'
+  score_params = '{{ PEER_SCORE_PARAMS  | tojson() }}'
+  t_score_inspect_period = '{{ T_SCORE_INSPECT_PERIOD | default('0s') }}'
+  validate_queue_size = '{{ VALIDATE_QUEUE_SIZE | default(0) }}'
+  outbound_queue_size = '{{ OUTBOUND_QUEUE_SIZE | default(0) }}'
+
+  t_latency = '{{ T_LATENCY | default('5ms') }}'
+  t_latency_max = '{{ T_LATENCY_MAX | default('50ms') }}'
+  jitter_pct = '{{ JITTER_PCT | default(10) | int }}'
+  bandwidth_mb = '{{ BANDWIDTH_MB | default(10240) | int }}'
+
+  topology = '{{ TOPOLOGY | tojson() }}'
+  degree = '{{ N_DEGREE | default(20) | int }}'
+
+  overlay_d = '{{ OVERLAY_D | default(-1) | int }}'
+  overlay_dlo = '{{ OVERLAY_DLO | default(-1) | int }}'
+  overlay_dhi = '{{ OVERLAY_DHI | default(-1) | int }}'
+  overlay_dscore = '{{ OVERLAY_DSCORE | default(-1) | int }}'
+  overlay_dlazy = '{{ OVERLAY_DLAZY | default(-1) | int }}'
+  gossip_factor = '{{ GOSSIP_FACTOR | default(0.25) | float }}'
+  opportunistic_graft_ticks = '{{ OPPORTUNISTIC_GRAFT_TICKS | default(60) | int }}'
+
+  n_container_nodes_total = '{{ N_CONTAINER_NODES_TOTAL | default(N_NODES) }}'
+  n_nodes_per_container = '{{ N_HONEST_PEERS_PER_NODE | default(1) | int }}'
+
+  connect_delays = '{{ HONEST_CONNECT_DELAYS | default('') }}'
+  connect_delay_jitter_pct = '{{ HONEST_CONNECT_DELAY_JITTER_PCT | default('5') | int }}'
+
+[[groups]]
+id = "attackers"
+instances = { count = {{ N_ATTACK_NODES | int }} }
+
+  [groups.build]
+  selectors = {{ BUILD_SELECTORS }}
+  dependencies = [
+    { module = "github.com/libp2p/go-libp2p-pubsub", version = "{{ GS_VERSION }}" }
+  ]
+
+  [groups.run.test_params]
+  t_heartbeat = "{{ T_HEARTBEAT | default('1s') }}"
+  t_heartbeat_initial_delay = "{{ T_HEARTBEAT_INITIAL_DELAY | default('100ms') }}"
+  t_run = "{{ T_RUN }}"
+  t_warm = "{{ T_WARM }}"
+  t_cool = "{{ T_COOL | default('10s') }}"
+  t_setup = "{{ T_SETUP | default('1m') }}"
+  full_traces = "{{ FULL_TRACES | default('false') }}"
+
+  attack_node_type = "{{ ATTACK_NODE_TYPE }}"
+  topics = '{{ TOPIC_CONFIG | tojson() }}'
+  score_params = '{{ PEER_SCORE_PARAMS  | tojson() }}'
+
+  t_latency = '{{ T_LATENCY | default('5ms') }}'
+  t_latency_max = '{{ T_LATENCY_MAX | default('5ms') }}'
+  jitter_pct = '{{ JITTER_PCT | default(10) | int }}'
+  bandwidth_mb = '{{ BANDWIDTH_MB | default(10240) | int }}'
+
+  topology = '{{ TOPOLOGY | tojson() }}'
+  degree = '{{ ATTACK_DEGREE | default(100) | int }}'
+
+  n_container_nodes_total = '{{ N_CONTAINER_NODES_TOTAL | default(N_NODES) }}'
+  n_nodes_per_container = '{{ N_ATTACK_PEERS_PER_NODE | default(1) | int }}'
+
+  sybil_degrade = '{{ SYBIL_DEGRADE | default('1.0') }}'
+  t_sybil_attack_delay = '{{ T_SYBIL_ATTACK_DELAY | default('0s') }}'
+  t_sybil_regraft_delay = '{{ T_SYBIL_REGRAFT_DELAY | default('15s') }}'
+  t_sybil_regraft_backoff = '{{ T_SYBIL_REGRAFT_BACKOFF | default('60s') }}'
+  t_sybil_seen_cache_duration = '{{ T_SYBIL_SEEN_CACHE_DURATION | default('120s') }}'
+  attack_single_node = '{{ ATTACK_SINGLE_NODE | default('false') }}'
+  censor_single_node = '{{ CENSOR_SINGLE_NODE | default('false') }}'
+  connect_to_publishers_only = '{{ ATTACK_PUBLISHERS_ONLY | default('false') }}'
+
+  connect_delays = '{{ ATTACKER_CONNECT_DELAYS | default('') }}'
+  connect_delay_jitter_pct = '{{ ATTACKER_CONNECT_DELAY_JITTER_PCT | default('5') | int }}'
+
+[[groups]]
+id = "lurkers"
+instances = { count = {{ N_NODES - N_PUBLISHER - N_ATTACK_NODES | int }} }
+
+  [groups.build]
+  selectors = {{ BUILD_SELECTORS }}
+  dependencies = [
+    { module = "github.com/libp2p/go-libp2p-pubsub", version = "{{ GS_VERSION }}" }
+  ]
+
+  [groups.run.test_params]
+  t_heartbeat = "{{ T_HEARTBEAT | default('1s') }}"
+  t_heartbeat_initial_delay = "{{ T_HEARTBEAT_INITIAL_DELAY | default('100ms') }}"
+  t_run = "{{ T_RUN }}"
+  t_warm = "{{ T_WARM }}"
+  t_cool = "{{ T_COOL | default('10s') }}"
+  t_setup = "{{ T_SETUP | default('1m') }}"
+  full_traces = "{{ FULL_TRACES | default('false') }}"
+
+  topics = '{{ TOPIC_CONFIG | tojson() }}'
+  score_params = '{{ PEER_SCORE_PARAMS  | tojson() }}'
+  t_score_inspect_period = '{{ T_SCORE_INSPECT_PERIOD | default('0s') }}'
+  validate_queue_size = '{{ VALIDATE_QUEUE_SIZE | default(0) }}'
+  outbound_queue_size = '{{ OUTBOUND_QUEUE_SIZE | default(0) }}'
+
+  t_latency = '{{ T_LATENCY | default('5ms') }}'
+  t_latency_max = '{{ T_LATENCY_MAX | default('50ms') }}'
+  jitter_pct = '{{ JITTER_PCT | default(10) | int }}'
+  bandwidth_mb = '{{ BANDWIDTH_MB | default(10240) | int }}'
+
+  topology = '{{ TOPOLOGY | tojson() }}'
+  degree = '{{ N_DEGREE | default(20) | int }}'
+
+  overlay_d = '{{ OVERLAY_D | default(-1) | int }}'
+  overlay_dlo = '{{ OVERLAY_DLO | default(-1) | int }}'
+  overlay_dhi = '{{ OVERLAY_DHI | default(-1) | int }}'
+  overlay_dscore = '{{ OVERLAY_DSCORE | default(-1) | int }}'
+  overlay_dlazy = '{{ OVERLAY_DLAZY | default(-1) | int }}'
+  gossip_factor = '{{ GOSSIP_FACTOR | default(0.25) | float }}'
+  opportunistic_graft_ticks = '{{ OPPORTUNISTIC_GRAFT_TICKS | default(60) | int }}'
+
+
+  n_container_nodes_total = '{{ N_CONTAINER_NODES_TOTAL }}'
+  n_nodes_per_container = '{{ N_HONEST_PEERS_PER_NODE | default(1) | int }}'
+
+  connect_delays = '{{ HONEST_CONNECT_DELAYS | default('') }}'
+  connect_delay_jitter_pct = '{{ HONEST_CONNECT_DELAY_JITTER_PCT | default('5') | int }}'
