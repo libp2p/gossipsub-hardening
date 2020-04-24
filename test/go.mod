@@ -6,8 +6,6 @@ require (
 	github.com/avast/retry-go v2.6.0+incompatible
 	github.com/dustin/go-humanize v1.0.0
 	github.com/gogo/protobuf v1.3.1
-	github.com/ipfs/testground/sdk/runtime v0.4.0
-	github.com/ipfs/testground/sdk/sync v0.4.0
 	github.com/libp2p/go-libp2p v0.6.1
 	github.com/libp2p/go-libp2p-core v0.5.0
 	github.com/libp2p/go-libp2p-pubsub v0.2.6

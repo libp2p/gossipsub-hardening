@@ -10,12 +10,9 @@ import subprocess
 import time
 import analyze
 
-TESTGROUND_BIN = '../../testground'
+TESTGROUND_BIN = 'testground'
 
 DEFAULT_GS_VERSION = 'latest'
-
-# The branch of gossipsub that has been hardened against attacks
-HARDENED_GS_BRANCH = 'feat/hardening'
 
 # setting this build tag lets us compile test code that targets the new API from the hardening branch
 HARDENED_API_BUILD_TAG = 'hardened_api'
@@ -37,12 +34,8 @@ def parse_args():
                         help='directory to write composition file and test outputs to',
                         default='./output')
 
-    parser.add_argument('--hardened', dest='hardened', action='store_true',
-                        help='configures the test to use the API from the gossipsub hardening '
-                             'branch {}'.format(HARDENED_GS_BRANCH),
-                        default=False)
-
     parser.add_argument('--branch',
+                        default='master',
                         help='configures the test to use the API from the given gossipsub branch')
 
     parser.add_argument('--commit',
@@ -214,19 +207,15 @@ def run():
 
     params = load_params(template_dir, args.param_files)
 
-    branch = ''
-    if args.hardened:
-        params['BUILD_SELECTORS'] = [HARDENED_API_BUILD_TAG]
-        if args.branch is None and args.commit is None:
-            branch = HARDENED_GS_BRANCH
-            params['GS_VERSION'] = branch_commit(HARDENED_GS_BRANCH)
+    branch = None
     if args.branch:
         branch = args.branch
         params['GS_VERSION'] = branch_commit(args.branch)
     if args.commit:
         params['GS_VERSION'] = args.commit
-    if not args.hardened and args.branch is None and args.commit is None:
-        params['GS_VERSION'] = DEFAULT_GS_VERSION
+    if branch is None and args.commit is None:
+        params['GS_VERSION'] = 'latest'
+
 
     gs_version_msg = 'Using go-libp2p-pubsub commit ' + params['GS_VERSION']
     if branch:

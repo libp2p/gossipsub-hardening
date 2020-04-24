@@ -1,4 +1,7 @@
+venv/
+
 scripts/output/
+scripts/config-snapshot.json
 __pycache__/
 .ipynb_checkpoints/
 

@@ -18,7 +18,7 @@ import shutil
 TEMPLATE = 'templates/baseline'
 
 # set to path of testground bin if not in PATH
-TESTGROUND = '../../testground'
+TESTGROUND = 'testground'
 
 
 class RunButton(object):
@@ -233,7 +233,7 @@ class ConfigPanel(object):
             ),
 
             pubsub=Bunch(
-                branch=widgets.Text(description="go-libp2p-pubsub branch to target", value="feat/hardening"),
+                branch=widgets.Text(description="go-libp2p-pubsub branch to target", value="master"),
                 use_hardened_api=widgets.Checkbox(description="target hardening branch API", value=True),
                 heartbeat=widgets.Text(description='Heartbeat interval', value='1s'),
                 hearbeat_delay=widgets.Text(description='Initial heartbeat delay', value='100ms'),
