@@ -269,8 +269,7 @@ def run_tracestat(tracer_output_dir):
 
 def extract_test_outputs(test_output_zip_path, output_dir=None, convert_to_pandas=False, prep_notebook=True):
     if output_dir is None or output_dir == '':
-        name = os.path.splitext(os.path.basename(test_output_zip_path))[0] + '-processed'
-        output_dir = os.path.join(os.path.dirname(test_output_zip_path), name)
+        output_dir = os.path.join(os.path.dirname(test_output_zip_path), 'analysis')
 
     mkdirp(output_dir)
     aggregate_output(test_output_zip_path, output_dir)

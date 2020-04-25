@@ -1,12 +1,8 @@
 COMPOSITION_NAME = "baseline"
 
 # the set of go build tags to apply when building.
-# to target the hardening branch of pubsub, use:
-# BUILD_SELECTORS = ['hardened_api']
-# Note that if you set the 'hardened_api' build tag, you also
-# need to also set GS_VERSION to a commit from the hardening
-# branch, or you'll get a compile error.
-BUILD_SELECTORS = []
+# set this to an empty array if you want to target a commit before gossipsub v1.1 was merged.
+BUILD_SELECTORS = ['hardened_api']
 
 # version of go-libp2p-pubsub to use when building the test plan
 GS_VERSION = "latest"

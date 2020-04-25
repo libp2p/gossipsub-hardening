@@ -23,12 +23,16 @@ K8S_RUN_CONFIG = {}
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('template_dir', nargs=1,
-                        help='path to directory containing composition template and param files')
-
     parser.add_argument('param_files', nargs='*',
                         help='name of one or more parameter files to use when generating composition from template. ' +
                              'if a param is defined in multiple files, last one wins.')
+
+    parser.add_argument('--name',
+                        help='name of composition. will be used to create output directory.')
+
+    parser.add_argument('--template_dir',
+                        default='./templates/baseline',
+                        help='path to directory containing composition template and param files')
 
     parser.add_argument('-o', '--output',
                         help='directory to write composition file and test outputs to',
@@ -164,12 +168,9 @@ def render_template(template_dir, params):
     return template.render(**params)
 
 
-def composition_name(args):
-    template_name = os.path.basename(args.template_dir[0])
-    variant = 'hardened' if args.hardened else 'vanilla'
-    strs = [template_name, variant]
-    strs += [os.path.splitext(os.path.basename(f))[0] for f in args.param_files]
-    return '-'.join(strs)
+def composition_name():
+    ts = time.strftime("%Y%m%d-%H%M%S")
+    return 'pubsub-test-{}'.format(ts)
 
 
 def mkdirp(dirpath):
@@ -177,9 +178,8 @@ def mkdirp(dirpath):
 
 
 def run_composition(comp_filepath, output_dir, k8s=False):
-    ts = time.strftime("%Y%m%d-%H%M%S")
     archive_type = 'tgz' if k8s else 'zip'
-    outfilename = 'output-{}.{}'.format(ts, archive_type)
+    outfilename = 'test-output.{}'.format(archive_type)
     outpath = os.path.join(output_dir, outfilename)
 
     print('running testground composition {}'.format(comp_filepath))
@@ -203,7 +203,7 @@ def branch_commit(branch):
 
 def run():
     args = parse_args()
-    template_dir = args.template_dir[0]
+    template_dir = args.template_dir
 
     params = load_params(template_dir, args.param_files)
 
@@ -245,7 +245,10 @@ def run():
     parse_n_attack_nodes(params)
     parse_n_container_nodes_total(params)
 
-    comp = composition_name(args)
+    comp = composition_name()
+    if args.name:
+        comp += '-' + args.name
+
     workdir = os.path.join(args.output, comp)
     pathlib.Path(workdir).mkdir(parents=True, exist_ok=True)
 
