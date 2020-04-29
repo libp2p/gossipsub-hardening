@@ -230,6 +230,9 @@ def mesh_events_to_pandas(event_stream, peers_table, sample_freq='5s'):
     def set_union(series):
         return reduce(lambda x, y: x.union(y), series, set())
 
+    # TODO: get greatest timestamp and add an empty event to all peer tables,
+    # so they all cover the same timespan and resample to the same indexes below
+
     resampled = []
     for peer, table in tables.items():
         # resample the raw grafts / prunes into windows of 5 secs (by default)
