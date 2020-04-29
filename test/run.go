@@ -154,14 +154,7 @@ func RunSimulation(runenv *runtime.RunEnv) error {
 				client:         client,
 				peerSubscriber: peerSubscriber,
 			}
-
-			// Before finishing, signal and wait for the complete state from all peers
-			defer func() {
-				errComp := t.waitForCompleteState(ctx)
-				if err == nil {
-					err = errComp
-				}
-			}()
+			
 
 			// Load the connection definition for the node
 			var connsDef *ConnectionsDef
