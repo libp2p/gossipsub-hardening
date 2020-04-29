@@ -181,9 +181,17 @@ def write_pandas(tables, output_dir):
 def load_pandas(analysis_dir):
     analysis_dir = os.path.abspath(analysis_dir)
     pandas_dir = os.path.join(analysis_dir, 'pandas')
+    raw_data_dir = os.path.join(analysis_dir, 'raw-data')
+
+    # if the raw-data dir doesn't exist, assume that we're running against an
+    # output directory that was extracted with an earlier version, which put
+    # the raw data in the "analysis" dir
+    if not os.path.exists(raw_data_dir):
+        raw_data_dir = analysis_dir
+
     if not os.path.exists(pandas_dir):
-        print('Cached pandas data not found. Converting analysis data from {} to pandas'.format(analysis_dir))
-        to_pandas(analysis_dir, pandas_dir)
+        print('Cached pandas data not found. Converting analysis data from {} to pandas'.format(raw_data_dir))
+        to_pandas(raw_data_dir, pandas_dir)
 
     tables = {}
     for f in os.listdir(pandas_dir):

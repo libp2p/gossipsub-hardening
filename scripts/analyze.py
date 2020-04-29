@@ -33,8 +33,8 @@ def parse_args():
                         help='path to testground output zip or tgz file')
 
     extract_cmd.add_argument('--output-dir', '-o', dest='output_dir', default=None,
-                             help='path to write output files. default is to create a new dir based on zip filename')
-    extract_cmd.set_defaults(subcomment='extract')
+                             help='path to write output files. default is to create an "analysis" dir next to archive file')
+    extract_cmd.set_defaults(subcommand='extract')
 
     run_notebook_cmd = commands.add_parser('run_notebook',
                                            help='runs latest analysis notebook against extracted test data')
@@ -271,14 +271,16 @@ def extract_test_outputs(test_output_zip_path, output_dir=None, convert_to_panda
     if output_dir is None or output_dir == '':
         output_dir = os.path.join(os.path.dirname(test_output_zip_path), 'analysis')
 
-    mkdirp(output_dir)
-    aggregate_output(test_output_zip_path, output_dir)
-    run_tracestat(output_dir)
+    raw_output_dir = os.path.join(output_dir, 'raw-data')
+    mkdirp(raw_output_dir)
+    aggregate_output(test_output_zip_path, raw_output_dir)
+    run_tracestat(raw_output_dir)
 
     if convert_to_pandas:
         import notebook_helper
         print('converting data to pandas format...')
-        notebook_helper.to_pandas(output_dir, os.path.join(output_dir, 'pandas'))
+        pandas_dir = os.path.join(output_dir, 'pandas')
+        notebook_helper.to_pandas(raw_output_dir, pandas_dir)
     if prep_notebook:
         prepare_analysis_notebook(analysis_dir=output_dir)
     return output_dir
