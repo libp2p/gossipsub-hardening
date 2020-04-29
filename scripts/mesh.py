@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 
 import pandas as pd
+import numpy as np
 import subprocess
 import json
 import base58
 import base64
 import sys
 import itertools
+from collections import defaultdict
+import pandas_sets # imported for side effects!
+
+from functools import reduce
 
 # FIXME - don't hardcode
 TRACE_ARCHIVE = 'output/mesh-test/analysis/filtered-trace.bin.gz'
@@ -41,18 +46,14 @@ def mesh_trace_event_stream(trace_filename):
 
 
 def empty_mesh_events_table():
-    return pd.DataFrame([], columns=['timestamp', 'peer', 'remote_peer', 'graft']).astype({
+    return pd.DataFrame([], columns=['timestamp', 'peer', 'grafted', 'pruned']).astype({
         'timestamp': 'datetime64[ns]',
         'peer': 'int64',
-        'remote_peer': 'int64',
-        'graft': 'bool',
-    })
+    }).set_index('timestamp')
 
 
 def mesh_events_to_pandas(event_stream, peers_table):
-    topic_tables = {}
-
-    i = 0
+    tables = defaultdict(empty_mesh_events_table)
     for evt in event_stream:
         typ = evt.get('type', -1)
         if typ == TYPE_GRAFT:
@@ -68,15 +69,42 @@ def mesh_events_to_pandas(event_stream, peers_table):
         peer = numeric_peer_id(b64_to_b58(evt['peerID']), peers_table)
         remote_peer = numeric_peer_id(b64_to_b58(info['peerID']), peers_table)
 
-        if topic not in topic_tables:
-            topic_tables[topic] = empty_mesh_events_table()
-        df = topic_tables[topic]
+        df = tables[peer]
 
-        row = [timestamp, peer, remote_peer, typ == TYPE_GRAFT]
-        df.at[i] = row
-        i += 1
-    df.set_index('timestamp', inplace=True)
-    return df.astype({'peer': 'int64', 'remote_peer': 'int64'})
+        grafted = set()
+        pruned = set()
+        if typ == TYPE_GRAFT:
+            grafted.add(remote_peer)
+        if typ == TYPE_PRUNE:
+            pruned.add(remote_peer)
+        row = [peer, grafted, pruned]
+        df.loc[timestamp] = row
+
+    def set_union(series):
+        return reduce(lambda x, y: x.union(y), series, set())
+
+    resampled = []
+    sample_freq = '5s'
+    for peer, table in tables.items():
+        t = table[['grafted', 'pruned']].resample(sample_freq).agg(set_union)
+        mesh = set()
+        # meshes = pd.Series(index=t.index, dtype='object')
+        honest = pd.Series(index=t.index, dtype='int32')
+        attacker = pd.Series(index=t.index, dtype='int32')
+        for index, row in t.iterrows():
+            mesh.update(row['grafted'])
+            mesh.difference_update(row['pruned'])
+            # meshes[index] = mesh.copy()
+            h, a = classify_mesh_peers(mesh, peers_table)
+            honest[index] = len(h)
+            attacker[index] = len(a)
+        # t['mesh'] = meshes
+        t['n_mesh_honest'] = honest
+        t['n_mesh_attacker'] = attacker
+        t['peer'] = peer
+        resampled.append(t.drop(columns=['grafted', 'pruned']))
+
+    return pd.concat(resampled)
 
 
 def b64_to_b58(b64_str):
@@ -85,7 +113,24 @@ def b64_to_b58(b64_str):
 
 
 def numeric_peer_id(pid_str, peers_table):
-    return peers_table[['peer_id', 'seq']].where(peers_table['peer_id'] == pid_str).dropna()['seq'].iloc[0]
+    pid = peers_table[['peer_id', 'seq']].where(peers_table['peer_id'] == pid_str).dropna()['seq'].iloc[0]
+    return int(pid)
+
+def classify_mesh_peers(mesh, peers_table):
+    peers = peers_table.set_index('seq')
+    mesh_honest = set()
+    mesh_attacker = set()
+    for p in mesh:
+        try:
+            honest = peers.loc[p]['honest']
+        except KeyError:
+            continue
+        if honest:
+            mesh_honest.add(p)
+        else:
+            mesh_attacker.add(p)
+    return mesh_honest, mesh_attacker
+
 
 if __name__ == '__main__':
     events = itertools.islice(mesh_trace_event_stream(TRACE_ARCHIVE), 100)
