@@ -69,6 +69,12 @@ func setupNetwork(ctx context.Context, runenv *runtime.RunEnv, netParams Network
 // getDataNetworkAddress examines the local network interfaces and tries to find one with
 // an address inside runenv.TestSubnet. Returns the addr if successful.
 func getDataNetworkAddress(runenv *runtime.RunEnv) (multiaddr.Multiaddr, error) {
+	// if there's no test sidecar, we're using the local:exec runner and don't care
+	// which interface we bind to
+	if !runenv.TestSidecar {
+		return multiaddr.StringCast("/ip4/0.0.0.0"), nil
+	}
+
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return nil, fmt.Errorf("unable to get local network interfaces: %s", err)
