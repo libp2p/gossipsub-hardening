@@ -244,6 +244,10 @@ bunch of existing test outputs. In that case, you can pass multiple paths to the
 The `scripts/sync_outputs.py` script is a wrapper around the [rclone](https://rclone.org) command that
 helps backup test outputs to an s3 bucket, or fetch a previously stored output directory to the local filesystem.
 
+The AWS credentials are pulled from the environment - see [the AWS cli docs](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html)
+if you haven't already configured the aws cli to use your credentials. 
+The configured user must have permission to access the bucket used to sync.
+
 `rclone` must be installed and on the `$PATH` to use the `sync_outputs.py` script.
 
 By default, it uses the S3 bucket `gossipsub-test-outputs` in `eu-central-1`, but you can control this with the
