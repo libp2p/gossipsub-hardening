@@ -101,7 +101,9 @@ func (bb *BadBoy) Censor(p peer.ID) {
 }
 
 func (bb *BadBoy) log(msg string, args ...interface{}) {
-	prefix := fmt.Sprintf("[sybil %d %s] ", bb.seq, bb.h.ID().Pretty()[:8])
+	id := bb.h.ID().Pretty()
+	idSuffix := id[len(id) - 8:]
+	prefix := fmt.Sprintf("[sybil %d %s] ", bb.seq, idSuffix)
 	bb.runenv.RecordMessage(prefix+msg, args...)
 }
 
