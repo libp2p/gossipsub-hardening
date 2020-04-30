@@ -303,7 +303,7 @@ class ConfigPanel(object):
         self.save_widgets = Bunch(
             save_button = widgets.Button(description='Save Config', button_style='primary'),
             load_button = widgets.Button(description='Load Saved Config', button_style='warning'),
-            snapshot_filename = widgets.Text(description='Path:', value='config-snapshot.json')
+            snapshot_filename = widgets.Text(description='Path:', value='configs/snapshot.json')
         )
 
         self.save_widgets.save_button.on_click(self.save_clicked)
