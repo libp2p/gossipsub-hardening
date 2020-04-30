@@ -60,7 +60,6 @@ The run scripts rely on a few commands being present on the `PATH`:
 
 - the `testground` binary
 - `go`
-- `gnuplot` (optional, you'll just get an error message and no latency svg file)
 
 ## Running Tests
 

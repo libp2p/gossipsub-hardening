@@ -202,40 +202,6 @@ def aggregate_output(output_zip_path, out_dir):
         outfile.write(json.dumps(topology))
 
 
-def plot_cdf(cdf, output_dir):
-    plotfile = """
-# Output W3C Scalable Vector Graphics
-set terminal svg
-set term svg size 1920, 1080
-# Remove line labels
-set key off
-# Set title and axes titles
-set title 'Propagation Delay vs Message Count'
-set xlabel 'Propagation Delay (ms)'
-set ylabel 'Message Count'
-# Set style of the boxes
-set boxwidth 0.7 relative
-set style fill solid
-# Put a bit of padding at the top
-set offset graph 0, 0, 0.10, 0
-# Remove x tics along bottom of graph
-set xtics scale 0
-# Plot data using column 2 for data
-plot '-' using 2:xtic(int($0)%5==0 ? strcol(1):'') w boxes linecolor rgb "#4682b4"
-    """
-
-    input = '\n'.join([plotfile, cdf])
-    outpath = os.path.join(output_dir, 'latency-distribution.svg')
-    print('plotting latency distribution, saving as ' + outpath)
-    try:
-        p = subprocess.run(['gnuplot', '-p'], text=True, input=input, encoding='utf8', capture_output=True, check=True)
-        with open(outpath, 'w', encoding='utf8') as f:
-            f.write(p.stdout)
-    except BaseException as err:
-        print('error running gnuplot: ', err)
-        return
-
-
 def run_tracestat(tracer_output_dir):
     full = os.path.join(tracer_output_dir, 'full-trace.bin.gz')
     filtered = os.path.join(tracer_output_dir, 'filtered-trace.bin.gz')
@@ -264,7 +230,6 @@ def run_tracestat(tracer_output_dir):
         f.write(cdf)
 
     print(summary)
-    plot_cdf(cdf, tracer_output_dir)
 
 
 def extract_test_outputs(test_output_zip_path, output_dir=None, convert_to_pandas=False, prep_notebook=True):
