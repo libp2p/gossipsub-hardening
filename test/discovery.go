@@ -24,6 +24,8 @@ const (
 	MaxConnectRetries  = 5
 )
 
+// PeerRegistration contains the addresses, sequence numbers and node type (honest / sybil / etc)
+// for each peer in the test. It is shared with every other peer using the sync service.
 type PeerRegistration struct {
 	Info        peer.AddrInfo
 	NType       NodeType
@@ -32,6 +34,10 @@ type PeerRegistration struct {
 	IsPublisher bool
 }
 
+// SyncDiscovery uses the testground sync API to share PeerRegistrations for the
+// local test peers and collect the info from all the other peers. It then allows
+// you to connect the local peers to a subset of the test peers, using a Topology
+// to control the peer selection.
 type SyncDiscovery struct {
 	h              host.Host
 	runenv         *runtime.RunEnv
