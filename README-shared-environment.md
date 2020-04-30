@@ -1,6 +1,6 @@
 # Shared jupyterhub Workflow
 
-This doc describes how we (the gossipsub-hardening team at Protocol Labs) has been running the tests in this repo.
+This doc describes how we (the gossipsub-hardening team at Protocol Labs) have been running the tests in this repo.
 
 ## Connecting to the Jupyterhub server
 
