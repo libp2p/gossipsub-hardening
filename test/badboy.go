@@ -89,10 +89,6 @@ func (bb *BadBoy) OnReady() {
 	}()
 }
 
-func (bb *BadBoy) ConnectToPeer(ctx context.Context, info peer.AddrInfo) error {
-	return bb.h.Connect(ctx, info)
-}
-
 func (bb *BadBoy) Censor(p peer.ID) {
 	bb.mx.Lock()
 	defer bb.mx.Unlock()
