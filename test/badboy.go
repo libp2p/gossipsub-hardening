@@ -12,6 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/protocol"
 
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
 
@@ -34,6 +35,9 @@ type BadBoy struct {
 	out       map[peer.ID]chan *pb.RPC
 	seen      *timecache.TimeCache
 }
+
+const gossipSubID = protocol.ID("/meshsub/1.0.0")
+const maxMessageSize = 1024 * 1024
 
 var (
 	// Regraft delay after getting pruned (slow graft attack); set to 0 to disable.
