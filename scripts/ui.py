@@ -233,7 +233,7 @@ class ConfigPanel(object):
             ),
 
             pubsub=Bunch(
-                branch=widgets.Text(description="go-libp2p-pubsub branch to target", value="master"),
+                branch=widgets.Text(description="go-libp2p-pubsub branch/tag/commit to target", value="master"),
                 use_hardened_api=widgets.Checkbox(description="target hardening branch API", value=True),
                 heartbeat=widgets.Text(description='Heartbeat interval', value='1s'),
                 hearbeat_delay=widgets.Text(description='Initial heartbeat delay', value='100ms'),
@@ -303,7 +303,7 @@ class ConfigPanel(object):
         self.save_widgets = Bunch(
             save_button = widgets.Button(description='Save Config', button_style='primary'),
             load_button = widgets.Button(description='Load Saved Config', button_style='warning'),
-            snapshot_filename = widgets.Text(description='Path:', value='config-snapshot.json')
+            snapshot_filename = widgets.Text(description='Path:', value='configs/snapshot.json')
         )
 
         self.save_widgets.save_button.on_click(self.save_clicked)
@@ -434,7 +434,7 @@ class ConfigPanel(object):
         else:
             p['BUILD_SELECTORS'] = []
 
-        p['GS_VERSION'] = run_helpers.branch_commit(w.pubsub.branch.value)
+        p['GS_VERSION'] = run_helpers.pubsub_commit(w.pubsub.branch.value)
 
         run_config = ['log_level="{}"'.format(w.testground.log_level.value)]
 

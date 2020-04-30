@@ -9,6 +9,7 @@ import pathlib
 import subprocess
 import time
 import analyze
+import re
 
 TESTGROUND_BIN = 'testground'
 
@@ -191,14 +192,20 @@ def run_composition(comp_filepath, output_dir, k8s=False):
     return outpath
 
 
-def branch_commit(branch):
-    ref = 'refs/heads/{}'.format(branch)
-    out = subprocess.run(['git', 'ls-remote', 'git://github.com/libp2p/go-libp2p-pubsub', ref],
-                         check=True, capture_output=True, text=True)
-    if len(out.stdout) == 0:
-        raise ValueError("couldn't find commit for " + branch)
+def pubsub_commit(ref_str):
+    # if the input looks like a git commit already, just return it as-is
+    if re.match(r'\b([a-f0-9]{40})\b', ref_str):
+        return ref_str
 
-    return out.stdout.split()[0]
+    out = subprocess.run(['git', 'ls-remote', 'git://github.com/libp2p/go-libp2p-pubsub'],
+                         check=True, capture_output=True, text=True)
+
+    # look for matching branch or tag in output
+    pattern = r'^\b([a-f0-9]{40})\b.*refs/(heads|tags)/' + ref_str + '$'
+    m = re.search(pattern, out.stdout, re.MULTILINE)
+    if not m:
+        raise ValueError('no branch or tag found matching {}'.format(ref_str))
+    return m.group(1)
 
 
 def run():
@@ -210,7 +217,7 @@ def run():
     branch = None
     if args.branch:
         branch = args.branch
-        params['GS_VERSION'] = branch_commit(args.branch)
+        params['GS_VERSION'] = pubsub_commit(args.branch)
     if args.commit:
         params['GS_VERSION'] = args.commit
     if branch is None and args.commit is None:

@@ -89,6 +89,8 @@ type PubsubNode struct {
 	pubwg sync.WaitGroup
 }
 
+// NewPubsubNode prepares the given Host to act as an honest pubsub node using the provided HonestNodeConfig.
+// The returned PubsubNode will not start immediately; call Run to begin the test behavior.
 func NewPubsubNode(runenv *runtime.RunEnv, ctx context.Context, h host.Host, cfg HonestNodeConfig) (*PubsubNode, error) {
 	opts, err := pubsubOptions(cfg)
 	if err != nil {
@@ -120,7 +122,9 @@ func NewPubsubNode(runenv *runtime.RunEnv, ctx context.Context, h host.Host, cfg
 }
 
 func (p *PubsubNode) log(msg string, args ...interface{}) {
-	prefix := fmt.Sprintf("[honest %d %s] ", p.cfg.Seq, p.h.ID().Pretty()[:8])
+	id := p.h.ID().Pretty()
+	idSuffix := id[len(id) - 8:]
+	prefix := fmt.Sprintf("[honest %d %s] ", p.cfg.Seq, idSuffix)
 	p.runenv.RecordMessage(prefix+msg, args...)
 }
 
