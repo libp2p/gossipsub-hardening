@@ -13,3 +13,4 @@ jupyter-ui-poll
 jupyter_contrib_nbextensions
 durations
 seaborn
+python-rclone

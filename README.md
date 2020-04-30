@@ -200,6 +200,52 @@ bunch of existing test outputs. In that case, you can pass multiple paths to the
 # will run the latest notebook against everything in `./output
  ```
 
+## Storing & Fetching Test Outputs in S3
+
+The `scripts/sync_outputs.py` script is a wrapper around the [rclone](https://rclone.org) command that
+helps backup test outputs to an s3 bucket, or fetch a previously stored output directory to the local filesystem.
+
+`rclone` must be installed and on the `$PATH` to use the `sync_outputs.py` script.
+
+By default, it uses the S3 bucket `gossipsub-test-outputs` in `eu-central-1`, but you can control this with the
+`--bucket` and `--region` flags.
+
+To backup all the test outputs in `./output`:
+
+```shell
+./sync_outputs.sh store-all ./output
+``` 
+
+It will ignore the `failed` subdirectory automatically, but if you want to ignore more, you can pass in a flag:
+
+```shell
+./sync_outputs.sh store-all ./output --ignore some-dir-you-dont-want-to-store
+``` 
+
+Alternatively, you can selectively store one or more test outputs with the `store` subcommand:
+
+```shell
+./sync_outputs.sh store ./output/pubsub-test-20200409-152658 ./output/pubsub-test-20200409-152983 # etc...
+``` 
+
+You can also fetch test outputs from S3 to the local filesystem.
+To fetch everything from the bucket into `./output`:
+
+```shell
+./sync_outputs.sh fetch-all ./output
+``` 
+
+Or, to fetch one or more tests from the bucket instead of everything:
+
+```shell
+./sync_outputs.sh fetch --dest=./output pubsub-test-20200409-152658
+``` 
+
+You can list all the top-level directories in the S3 bucket (so you know what to fetch) using the `list` command:
+
+```shell
+./sync_outputs.sh list
+``` 
 
 ## Code Overview
 
