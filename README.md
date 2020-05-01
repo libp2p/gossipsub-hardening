@@ -256,38 +256,38 @@ By default, it uses the S3 bucket `gossipsub-test-outputs` in `eu-central-1`, bu
 To backup all the test outputs in `./output`:
 
 ```shell
-./sync_outputs.sh store-all ./output
+./sync_outputs.py store-all ./output
 ``` 
 
 It will ignore the `failed` subdirectory automatically, but if you want to ignore more, you can pass in a flag:
 
 ```shell
-./sync_outputs.sh store-all ./output --ignore some-dir-you-dont-want-to-store
+./sync_outputs.py store-all ./output --ignore some-dir-you-dont-want-to-store
 ``` 
 
 Alternatively, you can selectively store one or more test outputs with the `store` subcommand:
 
 ```shell
-./sync_outputs.sh store ./output/pubsub-test-20200409-152658 ./output/pubsub-test-20200409-152983 # etc...
+./sync_outputs.py store ./output/pubsub-test-20200409-152658 ./output/pubsub-test-20200409-152983 # etc...
 ``` 
 
 You can also fetch test outputs from S3 to the local filesystem.
 To fetch everything from the bucket into `./output`:
 
 ```shell
-./sync_outputs.sh fetch-all ./output
+./sync_outputs.py fetch-all ./output
 ``` 
 
 Or, to fetch one or more tests from the bucket instead of everything:
 
 ```shell
-./sync_outputs.sh fetch --dest=./output pubsub-test-20200409-152658
+./sync_outputs.py fetch --dest=./output pubsub-test-20200409-152658
 ``` 
 
 You can list all the top-level directories in the S3 bucket (so you know what to fetch) using the `list` command:
 
 ```shell
-./sync_outputs.sh list
+./sync_outputs.py list
 ``` 
 
 ## Code Overview
