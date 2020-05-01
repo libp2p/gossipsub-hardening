@@ -251,7 +251,8 @@ class ConfigPanel(object):
             ),
 
             network=Bunch(
-                latency = widgets.Text(description="Network latency", value='5ms'),
+                latency = widgets.Text(description="Min latency", value='5ms'),
+                max_latency = widgets.Text(description="Max latency. If zero, latency will = min latency.", value='50ms'),
                 jitter_pct = widgets.IntSlider(description="Latency jitter %", value=10, min=1, max=100),
                 bandwidth_mb = widgets.IntText(description="Bandwidth (mb)", value=10240),
                 degree=widgets.IntText(description="Degree (# of initial connections) for honest peers", value=20),
@@ -401,6 +402,7 @@ class ConfigPanel(object):
 
             # network
             'T_LATENCY': w.network.latency.value,
+            'T_LATENCY_MAX': w.network.max_latency.value,
             'JITTER_PCT': w.network.jitter_pct.value,
             'BANDWIDTH_MB': w.network.bandwidth_mb.value,
             'N_DEGREE': w.network.degree.value,
