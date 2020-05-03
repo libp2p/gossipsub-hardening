@@ -2,14 +2,12 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
-	"github.com/dustin/go-humanize"
+	"github.com/testground/sdk-go/ptypes"
 	"github.com/testground/sdk-go/runtime"
 )
 
@@ -22,9 +20,9 @@ const (
 )
 
 type TopicConfig struct {
-	Id          string `json:"id"`
-	MessageRate Rate   `json:"message_rate"`
-	MessageSize Size   `json:"message_size"`
+	Id          string      `json:"id"`
+	MessageRate ptypes.Rate `json:"message_rate"`
+	MessageSize ptypes.Size `json:"message_size"`
 }
 
 type HeartbeatParams struct {
@@ -49,9 +47,9 @@ type ScoreParams struct {
 	IPColocationFactorWeight    float64
 	IPColocationFactorThreshold int
 
-	DecayInterval Duration
+	DecayInterval ptypes.Duration
 	DecayToZero   float64
-	RetainScore   Duration
+	RetainScore   ptypes.Duration
 }
 
 type OverlayParams struct {
@@ -76,7 +74,7 @@ type TopicScoreParams struct {
 	TopicWeight float64
 
 	TimeInMeshWeight  float64
-	TimeInMeshQuantum Duration
+	TimeInMeshQuantum ptypes.Duration
 	TimeInMeshCap     float64
 
 	FirstMessageDeliveriesWeight float64
@@ -85,7 +83,7 @@ type TopicScoreParams struct {
 
 	MeshMessageDeliveriesWeight, MeshMessageDeliveriesDecay      float64
 	MeshMessageDeliveriesCap, MeshMessageDeliveriesThreshold     float64
-	MeshMessageDeliveriesWindow, MeshMessageDeliveriesActivation Duration
+	MeshMessageDeliveriesWindow, MeshMessageDeliveriesActivation ptypes.Duration
 
 	MeshFailurePenaltyWeight, MeshFailurePenaltyDecay float64
 
@@ -292,101 +290,4 @@ func parseNodeType(nt string) NodeType {
 	default:
 		return NodeTypeHonest
 	}
-}
-
-// ---- wrapper types for JSON marshalling
-
-// Duration wraps a time.Duration and provides json marshal logic
-type Duration struct {
-	time.Duration
-}
-
-func (d Duration) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.String())
-}
-
-func (d *Duration) UnmarshalJSON(b []byte) error {
-	var v interface{}
-	if err := json.Unmarshal(b, &v); err != nil {
-		return err
-	}
-	switch value := v.(type) {
-	case float64:
-		d.Duration = time.Duration(value)
-		return nil
-	case string:
-		var err error
-		d.Duration, err = time.ParseDuration(value)
-		if err != nil {
-			return err
-		}
-		return nil
-	default:
-		return errors.New("invalid duration")
-	}
-}
-
-// Size allows you to unmarshal strings like "100 KB" into a uint64 byte count
-type Size uint64
-
-func (s Size) MarshalJSON() ([]byte, error) {
-	return nil, nil
-}
-func (s *Size) UnmarshalJSON(b []byte) error {
-	var v interface{}
-	if err := json.Unmarshal(b, &v); err != nil {
-		return err
-	}
-	str, ok := v.(string)
-	if !ok {
-		return errors.New("invalid size param, must be string")
-	}
-	n, err := humanize.ParseBytes(str)
-	if err != nil {
-		return err
-	}
-	*s = Size(n)
-	return nil
-}
-
-// Rate is a param that's parsed as "quantity / interval", where `quantity` is an float and  `interval`
-// is a string parsable by time.ParseDuration, e.g. "1s". You can omit the numeric component of the interval to default
-// to 1, e.g. "100/s" is the same as "100/1s". Examples of valid Rate strings: "100/s", "0.5/m", "500/5m"
-type Rate struct {
-	Quantity float64
-	Interval time.Duration
-}
-
-func (r Rate) MarshalJSON() ([]byte, error) {
-	return nil, nil
-}
-func (r *Rate) UnmarshalJSON(b []byte) error {
-	var v interface{}
-	if err := json.Unmarshal(b, &v); err != nil {
-		return err
-	}
-	str, ok := v.(string)
-	if !ok {
-		return errors.New("invalid rate param, must be string")
-	}
-	strs := strings.Split(str, "/")
-	if len(strs) != 2 {
-		return errors.New("invalid rate param. Must be in format  'quantity / interval'")
-	}
-	q, err := strconv.ParseFloat(strs[0], 64)
-	if err != nil {
-		return fmt.Errorf("error parsing quantity portion of rate: %s", err)
-	}
-	intervalStr := strings.TrimSpace(strs[1])
-	if !unicode.IsDigit(rune(intervalStr[0])) {
-		intervalStr = "1" + intervalStr
-	}
-	i, err := time.ParseDuration(intervalStr)
-	if err != nil {
-		return fmt.Errorf("error parsing interval portion of rate: %s", err)
-	}
-
-	r.Quantity = q
-	r.Interval = i
-	return nil
 }

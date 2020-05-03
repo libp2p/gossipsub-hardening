@@ -98,7 +98,7 @@ func (bb *BadBoy) Censor(p peer.ID) {
 
 func (bb *BadBoy) log(msg string, args ...interface{}) {
 	id := bb.h.ID().Pretty()
-	idSuffix := id[len(id) - 8:]
+	idSuffix := id[len(id)-8:]
 	prefix := fmt.Sprintf("[sybil %d %s] ", bb.seq, idSuffix)
 	bb.runenv.RecordMessage(prefix+msg, args...)
 }
@@ -126,7 +126,6 @@ func (bb *BadBoy) handleIncoming(s network.Stream) {
 	err := bb.openOutputStream(p)
 	if err != nil {
 		bb.log("error opening stream to %s", p.Pretty())
-		s.Reset()
 		return
 	}
 
