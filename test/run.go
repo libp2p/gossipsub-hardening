@@ -180,7 +180,7 @@ func RunSimulation(runenv *runtime.RunEnv) error {
 			// Listen for incoming connections
 			laddr := listenAddrs(netclient)
 			runenv.RecordMessage("listening on %s", laddr)
-			if err = t.h.Network().Listen(); err != nil {
+			if err = t.h.Network().Listen(laddr...); err != nil {
 				return nil
 			}
 
