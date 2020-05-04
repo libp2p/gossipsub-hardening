@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"net"
 	"os"
 	rt "runtime"
 	"time"
@@ -15,8 +16,10 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
+	manet "github.com/multiformats/go-multiaddr-net"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/testground/sdk-go/network"
 	"github.com/testground/sdk-go/runtime"
 	"github.com/testground/sdk-go/sync"
 )
@@ -25,14 +28,21 @@ import (
 const attackSeqOffset = 1000000
 
 // Listen on the address in the testground data network
-func listenAddrs(runenv *runtime.RunEnv) []multiaddr.Multiaddr {
-	dataAddr, err := getDataNetworkAddress(runenv)
-	if err != nil {
+func listenAddrs(netclient *network.Client) []multiaddr.Multiaddr {
+	ip, err := netclient.GetDataNetworkIP()
+	if err == network.ErrNoTrafficShaping {
+		ip = net.ParseIP("0.0.0.0")
+	} else if err != nil {
 		panic(fmt.Errorf("error getting data network addr: %s", err))
 	}
+
+	dataAddr, err := manet.FromIP(ip)
+	if err != nil {
+		panic(fmt.Errorf("could not convert IP to multiaddr; ip=%s, err=%s", ip, err))
+	}
+
 	// add /tcp/0 to auto select TCP listen port
 	listenAddr := dataAddr.Encapsulate(multiaddr.StringCast("/tcp/0"))
-	runenv.RecordMessage("listening on %s", listenAddr)
 	return []multiaddr.Multiaddr{listenAddr}
 }
 
@@ -128,8 +138,10 @@ func RunSimulation(runenv *runtime.RunEnv) error {
 		params.netParams.latencyMax = time.Duration(0)
 	}
 
+	netclient := network.NewClient(client, runenv)
+
 	// Set up traffic shaping. Note: this is the same for all nodes in the same container.
-	if err := setupNetwork(ctx, runenv, params.netParams, client); err != nil {
+	if err := setupNetwork(ctx, runenv, params.netParams, netclient); err != nil {
 		return fmt.Errorf("Failed to set up network: %w", err)
 	}
 
@@ -154,7 +166,6 @@ func RunSimulation(runenv *runtime.RunEnv) error {
 				client:         client,
 				peerSubscriber: peerSubscriber,
 			}
-			
 
 			// Load the connection definition for the node
 			var connsDef *ConnectionsDef
@@ -167,7 +178,9 @@ func RunSimulation(runenv *runtime.RunEnv) error {
 			}
 
 			// Listen for incoming connections
-			if err = t.h.Network().Listen(listenAddrs(runenv)...); err != nil {
+			laddr := listenAddrs(netclient)
+			runenv.RecordMessage("listening on %s", laddr)
+			if err = t.h.Network().Listen(laddr...); err != nil {
 				return nil
 			}
 
@@ -448,26 +461,14 @@ func (t *testInstance) connectTopology(ctx context.Context) error {
 func (t *testInstance) waitForCompleteState(ctx context.Context) error {
 	// Set a state barrier.
 	state := sync.State("complete")
-	doneCh := t.client.MustBarrier(ctx, state, t.params.containerNodesTotal).C
 
-	// Signal we've entered the state.
+	// Signal we've entered the state, and wait until all others have signalled.
 	t.RecordMessage("Signalling complete state")
-	_, err := t.client.SignalEntry(ctx, state)
+	_, err := t.client.SignalAndWait(ctx, state, t.params.containerNodesTotal)
 	if err != nil {
 		return err
 	}
-
-	// Wait until all others have signalled.
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case err := <-doneCh:
-		if err != nil {
-			return err
-		}
-		t.RecordMessage("All instances in complete state, done")
-	}
-
+	t.RecordMessage("All instances in complete state, done")
 	return nil
 }
 

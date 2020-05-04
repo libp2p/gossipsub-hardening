@@ -183,7 +183,6 @@ type PeerSubscriber struct {
 }
 
 func NewPeerSubscriber(ctx context.Context, runenv *runtime.RunEnv, client *tgsync.Client, containerCount int, containerNodesTotal int) *PeerSubscriber {
-
 	return &PeerSubscriber{
 		runenv:              runenv,
 		client:              client,

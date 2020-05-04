@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/testground/sdk-go/runtime"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/testground/sdk-go/runtime"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
@@ -123,7 +123,7 @@ func NewPubsubNode(runenv *runtime.RunEnv, ctx context.Context, h host.Host, cfg
 
 func (p *PubsubNode) log(msg string, args ...interface{}) {
 	id := p.h.ID().Pretty()
-	idSuffix := id[len(id) - 8:]
+	idSuffix := id[len(id)-8:]
 	prefix := fmt.Sprintf("[honest %d %s] ", p.cfg.Seq, idSuffix)
 	p.runenv.RecordMessage(prefix+msg, args...)
 }
