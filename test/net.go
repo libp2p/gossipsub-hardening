@@ -18,7 +18,10 @@ func setupNetwork(ctx context.Context, runenv *runtime.RunEnv, netParams Network
 
 	// Wait for the network to be initialized.
 	runenv.RecordMessage("Waiting for network initialization")
-	netclient.MustWaitNetworkInitialized(ctx)
+	err := netclient.WaitNetworkInitialized(ctx)
+	if err != nil {
+		return err
+	}
 	runenv.RecordMessage("Network init complete")
 
 	latency := netParams.latency
@@ -42,7 +45,10 @@ func setupNetwork(ctx context.Context, runenv *runtime.RunEnv, netParams Network
 	// random delay to avoid overloading weave (we hope)
 	delay := time.Duration(rand.Intn(1000)) * time.Millisecond
 	<-time.After(delay)
-	netclient.MustConfigureNetwork(ctx, config)
+	err = netclient.ConfigureNetwork(ctx, config)
+	if err != nil {
+		return err
+	}
 
 	runenv.RecordMessage("egress: %s latency (%d%% jitter) and %dMB bandwidth", netParams.latency, netParams.jitterPct, netParams.bandwidthMB)
 	return nil
