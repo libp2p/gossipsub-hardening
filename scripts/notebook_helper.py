@@ -282,8 +282,12 @@ def numeric_peer_id(pid_str, peers_table):
     Given a base58 peer id string and a table of peer info, returns the numeric seq number
     for the peer.
     """
-    pid = peers_table[['peer_id', 'seq']].where(peers_table['peer_id'] == pid_str).dropna()['seq'].iloc[0]
-    return int(pid)
+    try:
+        pid = peers_table[['peer_id', 'seq']].where(peers_table['peer_id'] == pid_str).dropna()['seq'].iloc[0]
+        return int(pid)
+    except BaseException as err:
+        print('unable to get numeric id for peer {}: {}'.format(pid_str, err), file=sys.stderr)
+        return -1
 
 
 def classify_mesh_peers(mesh, peers_table):
