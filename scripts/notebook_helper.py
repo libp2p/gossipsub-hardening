@@ -177,21 +177,17 @@ def mesh_trace_event_stream(trace_filename):
             yield event
 
 
-def empty_mesh_events_table():
-    """
-    :return: An empty DataFrame used to collect mesh state for a peer, used by mesh_events_to_pandas.
-    """
-    return pd.DataFrame([], columns=['timestamp', 'peer', 'grafted', 'pruned']).astype({
-        'timestamp': 'datetime64[ns]',
-        'peer': 'int64',
-    }).set_index('timestamp')
-
-
 def mesh_events_to_pandas(event_stream, peers_table, sample_freq='5s'):
     """
     Converts a stream of GRAFT / PRUNE tracer events to a pandas dataframe
     containing the state of each peers mesh, sampled at sample_freq intervals.
     """
+
+    def empty_mesh_events_table():
+        return pd.DataFrame([], columns=['timestamp', 'peer', 'grafted', 'pruned']).astype({
+            'timestamp': 'datetime64[ns]',
+            'peer': 'int64',
+        }).set_index('timestamp')
 
     # building the mesh state is simpler if we have one DataFrame per peer
     # and concat them together at the end.
@@ -200,6 +196,7 @@ def mesh_events_to_pandas(event_stream, peers_table, sample_freq='5s'):
     # first we build up a table of grafts / prunes. The 'grafted' and 'pruned' columns
     # contain python set objects with the seq id of the grafted or pruned peer.
     # These sets are used below to derive the mesh state.
+    last_timestamp = pd.to_datetime(0)
     for evt in event_stream:
         typ = evt.get('type', -1)
         if typ == TYPE_GRAFT:
@@ -211,6 +208,8 @@ def mesh_events_to_pandas(event_stream, peers_table, sample_freq='5s'):
             continue
 
         timestamp = pd.to_datetime(evt['timestamp'])
+        if timestamp > last_timestamp:
+            last_timestamp = timestamp
         topic = info['topic']  # TODO: multiple topics
         peer = numeric_peer_id(b64_to_b58(evt['peerID']), peers_table)
         remote_peer = numeric_peer_id(b64_to_b58(info['peerID']), peers_table)
@@ -230,11 +229,12 @@ def mesh_events_to_pandas(event_stream, peers_table, sample_freq='5s'):
     def set_union(series):
         return reduce(lambda x, y: x.union(y), series, set())
 
-    # TODO: get greatest timestamp and add an empty event to all peer tables,
-    # so they all cover the same timespan and resample to the same indexes below
-
     resampled = []
     for peer, table in tables.items():
+        # we add an empty row at last_timestamp to each table, so that all the
+        # tables cover the same time span before resampling
+        table.loc[last_timestamp] = [peer, set(), set()]
+
         # resample the raw grafts / prunes into windows of 5 secs (by default)
         # the 'grafted' and 'pruned' columns for each window will contain the
         # union of all peers grafted or pruned within the window
@@ -262,7 +262,14 @@ def mesh_events_to_pandas(event_stream, peers_table, sample_freq='5s'):
         t['peer'] = peer
         resampled.append(t.drop(columns=['grafted', 'pruned']))
 
-    return pd.concat(resampled)
+    df = pd.concat(resampled)
+    # TODO: make multiindex of [timestamp, peer]
+    return df
+
+
+def empty_meshes_table(sample_freq='5s'):
+    index = pd.date_range(0, periods=0, freq=sample_freq)
+    return pd.DataFrame(index=index, columns=['mesh', 'n_mesh_honest', 'n_mesh_attacker', 'peer'])
 
 
 def b64_to_b58(b64_str):
@@ -299,9 +306,17 @@ def classify_mesh_peers(mesh, peers_table):
     return mesh_honest, mesh_attacker
 
 
+def do_mesh_to_pandas(aggregate_output_dir, pandas_output_dir, peers_table, sample_freq='5s'):
+    print('deriving mesh state & converting to pandas...')
+    trace_file = os.path.join(aggregate_output_dir, 'filtered-trace.bin.gz')
+    df = mesh_events_to_pandas(mesh_trace_event_stream(trace_file), peers_table, sample_freq=sample_freq)
+    outfile = os.path.join(pandas_output_dir, 'meshes.gz')
+    print('writing mesh states to {}'.format(outfile))
+    df.to_pickle(outfile)
+    return df
 
 
-def to_pandas(aggregate_output_dir, pandas_output_dir):
+def to_pandas(aggregate_output_dir, pandas_output_dir, include_mesh=False):
     mkdirp(pandas_output_dir)
 
     print('converting peer ids and info to pandas...')
@@ -317,12 +332,8 @@ def to_pandas(aggregate_output_dir, pandas_output_dir):
     print('writing pandas peer scores to {}'.format(outfile))
     df.to_pickle(outfile)
 
-    print('deriving mesh state & converting to pandas...')
-    trace_file = os.path.join(aggregate_output_dir, 'filtered-trace.bin.gz')
-    df = mesh_events_to_pandas(mesh_trace_event_stream(trace_file), peers)
-    outfile = os.path.join(pandas_output_dir, 'meshes.gz')
-    print('writing mesh states to {}'.format(outfile))
-    df.to_pickle(outfile)
+    if include_mesh:
+        do_mesh_to_pandas(aggregate_output_dir, pandas_output_dir, peers)
 
     print('converting aggregate metrics to pandas...')
     outfile = os.path.join(pandas_output_dir, 'metrics.gz')
@@ -339,15 +350,7 @@ def to_pandas(aggregate_output_dir, pandas_output_dir):
     df.to_pickle(outfile)
 
 
-def write_pandas(tables, output_dir):
-    pandas_dir = os.path.join(output_dir, 'pandas')
-    mkdirp(pandas_dir)
-    for name, df in tables.items():
-        fname = os.path.join(pandas_dir, '{}.gz'.format(name))
-        df.to_pickle(fname)
-
-
-def load_pandas(analysis_dir):
+def load_pandas(analysis_dir, derive_meshes_if_missing=False, mesh_sample_freq='5s'):
     analysis_dir = os.path.abspath(analysis_dir)
     pandas_dir = os.path.join(analysis_dir, 'pandas')
     raw_data_dir = os.path.join(analysis_dir, 'raw-data')
@@ -371,6 +374,11 @@ def load_pandas(analysis_dir):
 
     if 'cdf' in tables:
         tables['pdf'] = cdf_to_pdf(tables['cdf'])
+
+    if derive_meshes_if_missing and not os.path.exists(os.path.join(pandas_dir, 'meshes.gz')):
+        peers_table = tables['peers']
+        print('Mesh data not found, and derive_meshes_if_missing==True, deriving meshes')
+        tables['meshes'] = do_mesh_to_pandas(raw_data_dir, pandas_dir, peers_table, sample_freq=mesh_sample_freq)
 
     return tables
 
