@@ -17,9 +17,8 @@ import shutil
 import re
 import sys
 
-
-
 ANALYSIS_NOTEBOOK_TEMPLATE = 'Analysis-Template.ipynb'
+
 
 def mkdirp(dirpath):
     pathlib.Path(dirpath).mkdir(parents=True, exist_ok=True)
@@ -30,7 +29,7 @@ def parse_args():
     commands = parser.add_subparsers()
     extract_cmd = commands.add_parser('extract', help='extract test outputs from testground output archive')
     extract_cmd.add_argument('test_output_zip_path', nargs=1,
-                        help='path to testground output zip or tgz file')
+                             help='path to testground output zip or tgz file')
 
     extract_cmd.add_argument('--output-dir', '-o', dest='output_dir', default=None,
                              help='path to write output files. default is to create an "analysis" dir next to archive file')
@@ -76,8 +75,12 @@ def find_files(dirname, filename_glob):
     return glob(path, recursive=True)
 
 
-PEER_INFO_PATTERN = re.compile(r'Host peer ID: ([0-9a-zA-Z]+), seq (\d+), node type: ([a-z]+), node type seq: (\d+), node index: (\d+) / (\d+)')
+PEER_INFO_PATTERN = re.compile(
+    r'Host peer ID: ([0-9a-zA-Z]+), seq (\d+), node type: ([a-z]+), node type seq: (\d+), node index: (\d+) / (\d+)')
+
+
 def extract_peer_info(run_out):
+    infos = []
     with open(run_out, 'rt') as f:
         for line in f.readlines():
             m = PEER_INFO_PATTERN.search(line)
@@ -88,14 +91,16 @@ def extract_peer_info(run_out):
                 node_type_seq = int(m.group(4))
                 node_index = int(m.group(5))
                 node_index_bound = int(m.group(6))
-                return {'peer_id': pid,
-                        'type': node_type,
-                        'seq': seq,
-                        'node_type_seq': node_type_seq,
-                        'node_index': node_index,
-                        'node_index_bound': node_index_bound}
-    print('warning: no peer info found in {}'.format(run_out))
-    return None
+                infos.append(
+                    {'peer_id': pid,
+                     'type': node_type,
+                     'seq': seq,
+                     'node_type_seq': node_type_seq,
+                     'node_index': node_index,
+                     'node_index_bound': node_index_bound})
+    if len(infos) == 0:
+        print('warning: no peer info found in {}'.format(run_out))
+    return infos
 
 
 def extract_timing_info(run_out, node_type):
@@ -144,12 +149,16 @@ def extract_timing_info(run_out, node_type):
 def extract_peer_and_timing_info(run_out_files):
     entries = []
     for filename in run_out_files:
-        info = extract_peer_info(filename)
-        if info is None:
+        infos = extract_peer_info(filename)
+        if infos is None or len(infos) == 0:
             continue
-        times = extract_timing_info(filename, info.get('type', 'unknown'))
-        info.update(times)
-        entries.append(info)
+
+        # FIXME: we only get the timing info for the first peer in the container
+        # unfortunately, getting the times for individual peers requires code changes
+        times = extract_timing_info(filename, infos[0].get('type', 'unknown'))
+        for info in infos:
+            info.update(times)
+            entries.append(info)
     return entries
 
 
@@ -289,6 +298,7 @@ def run():
     else:
         print('unknown subcommand', file=sys.stderr)
         sys.exit(1)
+
 
 if __name__ == '__main__':
     run()
