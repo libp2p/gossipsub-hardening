@@ -37,6 +37,8 @@ def parse_args():
 
     run_notebook_cmd = commands.add_parser('run_notebook',
                                            help='runs latest analysis notebook against extracted test data')
+    run_notebook_cmd.add_argument('--mesh', action='store_true', default=False,
+                                  help='if true, derive the mesh state when converting data. This takes a long time, so the default is false.')
     run_notebook_cmd.add_argument('test_result_dir', nargs='+',
                                   help='directories to run against. must contain an "analysis" subdir with extracted test data')
     run_notebook_cmd.set_defaults(subcommand='run_notebook')
@@ -267,10 +269,12 @@ def prepare_analysis_notebook(analysis_dir):
     print('saved analysis notebook to {}'.format(notebook_out))
 
 
-def run_analysis_notebook(analysis_dir):
+def run_analysis_notebook(analysis_dir, derive_meshes=False):
     prepare_analysis_notebook(analysis_dir)
     notebook_path = os.path.join(analysis_dir, 'Analysis.ipynb')
     cmd = ['papermill', ANALYSIS_NOTEBOOK_TEMPLATE, notebook_path, '--cwd', analysis_dir]
+    if derive_meshes:
+        cmd += ['-p', 'DERIVE_MESHES=True']
     try:
         subprocess.run(cmd, check=True)
     except BaseException as err:
@@ -278,14 +282,14 @@ def run_analysis_notebook(analysis_dir):
         return
 
 
-def run_notebooks(test_result_dirs):
+def run_notebooks(test_result_dirs, derive_meshes=False):
     for d in test_result_dirs:
         analysis_dir = os.path.join(d, 'analysis')
         if not os.path.exists(analysis_dir):
             print('no analysis dir at {}, ignoring'.format(analysis_dir), file=sys.stderr)
             continue
         print('running analysis in {}'.format(analysis_dir))
-        run_analysis_notebook(analysis_dir)
+        run_analysis_notebook(analysis_dir, derive_meshes=derive_meshes)
 
 
 def run():
@@ -294,7 +298,7 @@ def run():
         zip_filename = args.test_output_zip_path[0]
         extract_test_outputs(zip_filename, args.output_dir)
     elif args.subcommand == 'run_notebook':
-        run_notebooks(args.test_result_dir)
+        run_notebooks(args.test_result_dir, derive_meshes=args.meshes)
     else:
         print('unknown subcommand', file=sys.stderr)
         sys.exit(1)
