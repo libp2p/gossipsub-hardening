@@ -441,6 +441,11 @@ def no_scores_message():
     display(Markdown("""##### No peer score data, chart omitted"""))
 
 
+def no_meshes_message():
+    from IPython.display import display, Markdown
+    display(Markdown("""##### No mesh data, chart omitted. To generate mesh data, re-run with `DERIVE_MESHES=True`"""))
+
+
 def tracestat_summary(analysis_dir):
     summary_file = os.path.join(analysis_dir, 'tracestat-summary.txt')
     if os.path.exists(summary_file):
