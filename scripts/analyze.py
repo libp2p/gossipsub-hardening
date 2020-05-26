@@ -274,7 +274,7 @@ def run_analysis_notebook(analysis_dir, derive_meshes=False):
     notebook_path = os.path.join(analysis_dir, 'Analysis.ipynb')
     cmd = ['papermill', ANALYSIS_NOTEBOOK_TEMPLATE, notebook_path, '--cwd', analysis_dir]
     if derive_meshes:
-        cmd += ['-p', 'DERIVE_MESHES=True']
+        cmd += ['-p', 'DERIVE_MESHES', 'True']
     try:
         subprocess.run(cmd, check=True)
     except BaseException as err:
