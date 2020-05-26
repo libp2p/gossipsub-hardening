@@ -298,7 +298,7 @@ def run():
         zip_filename = args.test_output_zip_path[0]
         extract_test_outputs(zip_filename, args.output_dir)
     elif args.subcommand == 'run_notebook':
-        run_notebooks(args.test_result_dir, derive_meshes=args.meshes)
+        run_notebooks(args.test_result_dir, derive_meshes=args.mesh)
     else:
         print('unknown subcommand', file=sys.stderr)
         sys.exit(1)
