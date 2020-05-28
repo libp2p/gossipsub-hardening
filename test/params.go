@@ -58,6 +58,7 @@ type OverlayParams struct {
 	dhi          int
 	dscore       int
 	dlazy        int
+	dout         int
 	gossipFactor float64
 }
 
@@ -167,6 +168,7 @@ func parseParams(runenv *runtime.RunEnv) testParams {
 		dhi:          runenv.IntParam("overlay_dhi"),
 		dscore:       runenv.IntParam("overlay_dscore"),
 		dlazy:        runenv.IntParam("overlay_dlazy"),
+		dout:         runenv.IntParam("overlay_dout"),
 		gossipFactor: runenv.FloatParam("gossip_factor"),
 	}
 

@@ -246,6 +246,7 @@ class ConfigPanel(object):
                 degree_hi=widgets.IntText(description='D_hi: mesh degree upper bound', value=16),
                 degree_score=widgets.IntText(description='D_score: peers to select by score', value=5),
                 degree_lazy=widgets.IntText(description='D_lazy: lazy propagation degree', value=12),
+                degree_outbound=widgets.IntText(description='D_out: outbound connection quota', value=2),
                 gossip_factor=widgets.FloatText(description='Gossip Factor', value=0.25),
                 opportunistic_graft_ticks=widgets.IntText(description='Opportunistic Graft heartbeat ticks', value=60),
             ),
@@ -397,6 +398,7 @@ class ConfigPanel(object):
             'OVERLAY_DHI': w.pubsub.degree_hi.value,
             'OVERLAY_DSCORE': w.pubsub.degree_score.value,
             'OVERLAY_DLAZY': w.pubsub.degree_lazy.value,
+            'OVERLAY_DOUT': w.pubsub.degree_outbound.value,
             'GOSSIP_FACTOR': w.pubsub.gossip_factor.value,
             'OPPORTUNISTIC_GRAFT_TICKS': w.pubsub.opportunistic_graft_ticks.value,
 
