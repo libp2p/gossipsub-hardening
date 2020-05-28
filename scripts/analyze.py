@@ -17,9 +17,8 @@ import shutil
 import re
 import sys
 
-
-
 ANALYSIS_NOTEBOOK_TEMPLATE = 'Analysis-Template.ipynb'
+
 
 def mkdirp(dirpath):
     pathlib.Path(dirpath).mkdir(parents=True, exist_ok=True)
@@ -30,14 +29,16 @@ def parse_args():
     commands = parser.add_subparsers()
     extract_cmd = commands.add_parser('extract', help='extract test outputs from testground output archive')
     extract_cmd.add_argument('test_output_zip_path', nargs=1,
-                        help='path to testground output zip or tgz file')
+                             help='path to testground output zip or tgz file')
 
     extract_cmd.add_argument('--output-dir', '-o', dest='output_dir', default=None,
-                             help='path to write output files. default is to create a new dir based on zip filename')
-    extract_cmd.set_defaults(subcomment='extract')
+                             help='path to write output files. default is to create an "analysis" dir next to archive file')
+    extract_cmd.set_defaults(subcommand='extract')
 
     run_notebook_cmd = commands.add_parser('run_notebook',
                                            help='runs latest analysis notebook against extracted test data')
+    run_notebook_cmd.add_argument('--mesh', action='store_true', default=False,
+                                  help='if true, derive the mesh state when converting data. This takes a long time, so the default is false.')
     run_notebook_cmd.add_argument('test_result_dir', nargs='+',
                                   help='directories to run against. must contain an "analysis" subdir with extracted test data')
     run_notebook_cmd.set_defaults(subcommand='run_notebook')
@@ -76,8 +77,12 @@ def find_files(dirname, filename_glob):
     return glob(path, recursive=True)
 
 
-PEER_INFO_PATTERN = re.compile(r'Host peer ID: ([0-9a-zA-Z]+), seq (\d+), node type: ([a-z]+), node type seq: (\d+), node index: (\d+) / (\d+)')
+PEER_INFO_PATTERN = re.compile(
+    r'Host peer ID: ([0-9a-zA-Z]+), seq (\d+), node type: ([a-z]+), node type seq: (\d+), node index: (\d+) / (\d+)')
+
+
 def extract_peer_info(run_out):
+    infos = []
     with open(run_out, 'rt') as f:
         for line in f.readlines():
             m = PEER_INFO_PATTERN.search(line)
@@ -88,14 +93,16 @@ def extract_peer_info(run_out):
                 node_type_seq = int(m.group(4))
                 node_index = int(m.group(5))
                 node_index_bound = int(m.group(6))
-                return {'peer_id': pid,
-                        'type': node_type,
-                        'seq': seq,
-                        'node_type_seq': node_type_seq,
-                        'node_index': node_index,
-                        'node_index_bound': node_index_bound}
-    print('warning: no peer info found in {}'.format(run_out))
-    return None
+                infos.append(
+                    {'peer_id': pid,
+                     'type': node_type,
+                     'seq': seq,
+                     'node_type_seq': node_type_seq,
+                     'node_index': node_index,
+                     'node_index_bound': node_index_bound})
+    if len(infos) == 0:
+        print('warning: no peer info found in {}'.format(run_out))
+    return infos
 
 
 def extract_timing_info(run_out, node_type):
@@ -144,12 +151,16 @@ def extract_timing_info(run_out, node_type):
 def extract_peer_and_timing_info(run_out_files):
     entries = []
     for filename in run_out_files:
-        info = extract_peer_info(filename)
-        if info is None:
+        infos = extract_peer_info(filename)
+        if infos is None or len(infos) == 0:
             continue
-        times = extract_timing_info(filename, info.get('type', 'unknown'))
-        info.update(times)
-        entries.append(info)
+
+        # FIXME: we only get the timing info for the first peer in the container
+        # unfortunately, getting the times for individual peers requires code changes
+        times = extract_timing_info(filename, infos[0].get('type', 'unknown'))
+        for info in infos:
+            info.update(times)
+            entries.append(info)
     return entries
 
 
@@ -236,14 +247,16 @@ def extract_test_outputs(test_output_zip_path, output_dir=None, convert_to_panda
     if output_dir is None or output_dir == '':
         output_dir = os.path.join(os.path.dirname(test_output_zip_path), 'analysis')
 
-    mkdirp(output_dir)
-    aggregate_output(test_output_zip_path, output_dir)
-    run_tracestat(output_dir)
+    raw_output_dir = os.path.join(output_dir, 'raw-data')
+    mkdirp(raw_output_dir)
+    aggregate_output(test_output_zip_path, raw_output_dir)
+    run_tracestat(raw_output_dir)
 
     if convert_to_pandas:
         import notebook_helper
         print('converting data to pandas format...')
-        notebook_helper.to_pandas(output_dir, os.path.join(output_dir, 'pandas'))
+        pandas_dir = os.path.join(output_dir, 'pandas')
+        notebook_helper.to_pandas(raw_output_dir, pandas_dir)
     if prep_notebook:
         prepare_analysis_notebook(analysis_dir=output_dir)
     return output_dir
@@ -256,10 +269,12 @@ def prepare_analysis_notebook(analysis_dir):
     print('saved analysis notebook to {}'.format(notebook_out))
 
 
-def run_analysis_notebook(analysis_dir):
+def run_analysis_notebook(analysis_dir, derive_meshes=False):
     prepare_analysis_notebook(analysis_dir)
     notebook_path = os.path.join(analysis_dir, 'Analysis.ipynb')
     cmd = ['papermill', ANALYSIS_NOTEBOOK_TEMPLATE, notebook_path, '--cwd', analysis_dir]
+    if derive_meshes:
+        cmd += ['-p', 'DERIVE_MESHES', 'True']
     try:
         subprocess.run(cmd, check=True)
     except BaseException as err:
@@ -267,14 +282,14 @@ def run_analysis_notebook(analysis_dir):
         return
 
 
-def run_notebooks(test_result_dirs):
+def run_notebooks(test_result_dirs, derive_meshes=False):
     for d in test_result_dirs:
         analysis_dir = os.path.join(d, 'analysis')
         if not os.path.exists(analysis_dir):
             print('no analysis dir at {}, ignoring'.format(analysis_dir), file=sys.stderr)
             continue
         print('running analysis in {}'.format(analysis_dir))
-        run_analysis_notebook(analysis_dir)
+        run_analysis_notebook(analysis_dir, derive_meshes=derive_meshes)
 
 
 def run():
@@ -283,10 +298,11 @@ def run():
         zip_filename = args.test_output_zip_path[0]
         extract_test_outputs(zip_filename, args.output_dir)
     elif args.subcommand == 'run_notebook':
-        run_notebooks(args.test_result_dir)
+        run_notebooks(args.test_result_dir, derive_meshes=args.mesh)
     else:
         print('unknown subcommand', file=sys.stderr)
         sys.exit(1)
+
 
 if __name__ == '__main__':
     run()
