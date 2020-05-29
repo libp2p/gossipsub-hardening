@@ -44,6 +44,9 @@ func pubsubOptions(cfg HonestNodeConfig) ([]pubsub.Option, error) {
 	if cfg.OverlayParams.dlazy >= 0 {
 		pubsub.GossipSubDlazy = cfg.OverlayParams.dlazy
 	}
+	if cfg.OverlayParams.dout >= 0 {
+		pubsub.GossipSubDout = cfg.OverlayParams.dout
+	}
 	if cfg.OverlayParams.gossipFactor > 0 {
 		pubsub.GossipSubGossipFactor = cfg.OverlayParams.gossipFactor
 	}
