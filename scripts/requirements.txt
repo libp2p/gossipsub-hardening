@@ -16,3 +16,4 @@ seaborn
 python-rclone
 pandas-sets
 base58
+ipyfilechooser
