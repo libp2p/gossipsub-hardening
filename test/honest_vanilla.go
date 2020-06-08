@@ -19,5 +19,16 @@ func pubsubOptions(cfg HonestNodeConfig) ([]pubsub.Option, error) {
 		opts = append(opts, pubsub.WithPeerOutboundQueueSize(cfg.OutboundQueueSize))
 	}
 
+	// Set the overlay parameters
+	if cfg.OverlayParams.d >= 0 {
+		pubsub.GossipSubD = cfg.OverlayParams.d
+	}
+	if cfg.OverlayParams.dlo >= 0 {
+		pubsub.GossipSubDlo = cfg.OverlayParams.dlo
+	}
+	if cfg.OverlayParams.dhi >= 0 {
+		pubsub.GossipSubDhi = cfg.OverlayParams.dhi
+	}
+
 	return opts, nil
 }
