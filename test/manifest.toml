@@ -65,6 +65,7 @@ instances = { min = 1, max = 2000, default = 10 }
   overlay_dhi = { type = "int", desc = "the high watermark of overlay_d", default=-1 }
   overlay_dscore = { type = "int", desc = "the number of peers to keep by score", default=-1 }
   overlay_dlazy = { type = "int", desc = "degree for gossip nodes", default=-1 }
+  overlay_dout  = { type = "int", desc = "outbound connection quota", default=-1 }
   gossip_factor = { type = "float", desc = "gossip factor", default=0.25 }
   opportunistic_graft_ticks = { type = "int", desc = "Number of heartbeat ticks for attempting opportunistic grafting", default=60 }
 
