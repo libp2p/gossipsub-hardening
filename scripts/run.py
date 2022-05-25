@@ -197,7 +197,7 @@ def pubsub_commit(ref_str):
     if re.match(r'\b([a-f0-9]{40})\b', ref_str):
         return ref_str
 
-    out = subprocess.run(['git', 'ls-remote', 'git://github.com/libp2p/go-libp2p-pubsub'],
+    out = subprocess.run(['git', 'ls-remote', 'https://github.com/libp2p/go-libp2p-pubsub'],
                          check=True, capture_output=True, text=True)
 
     # look for matching branch or tag in output
